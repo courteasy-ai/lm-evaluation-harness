@@ -76,7 +76,7 @@ Argilla is used for qualitative evaluation and human review of model responses.
 Run the evaluation with:
 Enter lm-evaluation-harness dir 
 ```bash
-python main.py
+python evaluate_nugen.py
 ```
 
 ## Results Analysis
