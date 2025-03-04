@@ -32,20 +32,20 @@ load_dotenv()
 RESULTS_FILE = "results.json"
 RESULTS_DIR = "results_nugen_test_results"
 MODEL_NAME = "nugen"
-MODEL_ARGS = {"model": "nugen-flash-instruct", "temperature": 0.0}
+MODEL_ARGS = {"model": "llama-v3p1-405b-instruct", "temperature": 0.0}
 TASKS = ["aibe"]
 NUM_FEWSHOT = 0
-BATCH_SIZE = 5
+BATCH_SIZE = 1
 SYSTEM_PROMPT = """You are a highly capable assistant with expertise in law, ethics, and reasoning.
-You are taking the Australian Bar Exam, which consists of multiple-choice questions.
+You are taking the All India Bar Exam, which consists of multiple-choice questions.
 Each question will have four options (A, B, C, D).
 Read each question carefully, consider all options, and select the single most appropriate answer.
 Provide your answer by stating the letter of your chosen option (A, B, C, or D).
 Do not explain your reasoning unless specifically asked."""
-MLFLOW_TRACKING_URI = "http://localhost:5000/"
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
 MLFLOW_EXPERIMENT = "LLM Evaluation - Nugen Models"
 ARGILLA_DATASET = "aibe_evaluation"
-ARGILLA_BATCH_SIZE = 5
+ARGILLA_BATCH_SIZE = 1
 
 def run_evaluation():
     """
@@ -211,7 +211,7 @@ def create_argilla_dataset(argilla_client, dataset_name):
         logger.error(f"Failed to create Argilla dataset: {e}")
         return None
 
-def log_results_to_argilla(argilla_client, results, dataset_name, batch_size=5):
+def log_results_to_argilla(argilla_client, results, dataset_name, batch_size=1):
     """
     Log evaluation results to Argilla dataset
     """
