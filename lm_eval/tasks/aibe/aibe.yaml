@@ -1,0 +1,21 @@
+task: aibe
+dataset_path: ParimalThakre/combined_legal_datasets_sequential
+dataset_name: null
+# Specify which splits to use
+training_split: train
+validation_split: null
+test_split: train  # Use the train split as the test split for evaluation
+fewshot_split: train  # Use the train split for few-shot examples as well
+output_type: generate_until
+process_docs: !function utils.process_docs
+doc_to_text: "Question: {{question}}\nA. {{option_a}}\nB. {{option_b}}\nC. {{option_c}}\nD. {{option_d}}\nAnswer:"
+doc_to_target: "{{correct_option}}"
+generation_kwargs:
+  temperature: 0.0
+  max_tokens: 50
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  version: 0.1
