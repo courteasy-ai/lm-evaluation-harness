@@ -24,10 +24,10 @@ AZURE_AVAILABLE = True
 eval_logger = logging.getLogger(__name__)
 
 # Azure OpenAI configuration - can be overridden with environment variables
-AZURE_API_KEY = os.environ.get("AZURE_API_KEY", "05d8237b31e44ce9adebe8fd9fc1357e")
-AZURE_ENDPOINT = os.environ.get("AZURE_ENDPOINT", "https://courteasy-azure-openai.openai.azure.com/")
-AZURE_DEPLOYMENT = os.environ.get("AZURE_DEPLOYMENT", "courteasy-ai-gpt-4o-mini")
-AZURE_API_VERSION = os.environ.get("AZURE_API_VERSION", "2024-02-01")
+AZURE_API_KEY = os.environ.get("AZURE_API_KEY")
+AZURE_ENDPOINT = os.environ.get("AZURE_ENDPOINT")
+AZURE_DEPLOYMENT = os.environ.get("AZURE_DEPLOYMENT")
+AZURE_API_VERSION = "2024-02-01"
 client = AzureOpenAI(
             api_key=AZURE_API_KEY,
             azure_endpoint=AZURE_ENDPOINT,
@@ -227,7 +227,7 @@ def extract_letter_answer(text, question_context=None, max_azure_retries=2):
                 time.sleep(1)  # Small delay between retries
     
     # If all else fails, return empty string
-    return ""
+    return "No Response"
 
 # Global dictionary to store question contexts for each request
 question_contexts = {}
