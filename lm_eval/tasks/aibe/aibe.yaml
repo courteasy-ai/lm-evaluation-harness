@@ -1,5 +1,5 @@
 task: aibe
-dataset_path: ParimalThakre/aibe_reformatted
+dataset_path: ParimalThakre/combined_legal_datasets_sequential
 dataset_name: null
 # Specify which splits to use
 training_split: train
@@ -12,7 +12,7 @@ doc_to_text: "Question: {{question}}\nA. {{option_a}}\nB. {{option_b}}\nC. {{opt
 doc_to_target: "{{correct_option}}"
 generation_kwargs:
   temperature: 0.0
-  max_tokens: 256
+  max_tokens: 50
 metric_list:
   - metric: exact_match
     aggregation: mean

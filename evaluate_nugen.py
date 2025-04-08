@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 import mlflow
 import argilla as rg
 from argilla import TextField, LabelQuestion, Dataset
+import random
+from tenacity import *
 
 # Import evaluation-specific modules
 try:
@@ -29,23 +31,51 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Fixed configuration values (can be changed directly in the script)
-RESULTS_FILE = "results.json"
+RESULTS_FILE = "results_aibe_clat.json"
 RESULTS_DIR = "results_nugen_test_results"
 MODEL_NAME = "nugen"
-MODEL_ARGS = {"model": "llama-v3p1-405b-instruct", "temperature": 0.0}
+MODEL_ARGS = {"model": "nugen-legal-india", "temperature": 0.0}
 TASKS = ["aibe"]
 NUM_FEWSHOT = 0
 BATCH_SIZE = 1
-SYSTEM_PROMPT = """You are a highly capable assistant with expertise in law, ethics, and reasoning.
-You are taking the All India Bar Exam, which consists of multiple-choice questions.
-Each question will have four options (A, B, C, D).
-Read each question carefully, consider all options, and select the single most appropriate answer.
-Provide your answer by stating the letter of your chosen option (A, B, C, or D).
-Do not explain your reasoning unless specifically asked."""
+SYSTEM_PROMPT = """
+You are a specialized legal assistant with expertise in Indian law, answering questions from the All India Bar Exam (AIBE) and Common Law Admission Test (CLAT). 
+Your task is to select the most accurate answer from the provided options.
+
+Instructions:
+- Read each question carefully and analyze all options thoroughly
+- Consider relevant legal principles, statutes, and case law from Indian legal system
+- Select the single most appropriate answer
+- Respond with ONLY the phrase "The correct option is: X" where X is your chosen option (A, B, C, or D)
+- Do not provide any explanation or reasoning
+
+Examples:
+
+Example 1:
+Question: Under the Constitution of India, which of the following is NOT a Fundamental Right?
+A. Right to Equality
+B. Right to Freedom
+C. Right to Property
+D. Right to Constitutional Remedies
+Answer: The correct option is: C
+
+Example 2:
+Question: In which case did the Supreme Court of India establish the 'basic structure doctrine'?
+A. Golaknath v. State of Punjab
+B. Kesavananda Bharati v. State of Kerala
+C. Minerva Mills v. Union of India
+D. S.R. Bommai v. Union of India
+Answer: The correct option is: B
+
+
+Remember: Your response should be in the format "The correct option is: X" where X is A, B, C, or D.
+"""
+
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
 MLFLOW_EXPERIMENT = "LLM Evaluation - Nugen Models"
-ARGILLA_DATASET = "aibe_evaluation"
+ARGILLA_DATASET = "aibe_evaluation_3"
 ARGILLA_BATCH_SIZE = 1
+
 
 def run_evaluation():
     """
@@ -83,6 +113,17 @@ def run_evaluation():
             # Print results
             print(make_table(results))
             
+            # Access and preserve full model responses
+            if "samples" in results:
+                for task_name, task_samples in results["samples"].items():
+                    for i, sample in enumerate(task_samples):
+                        # Check for the full response from parse_generations
+                        if "full_responses" in sample:
+                            sample["model_full_response"] = sample["full_responses"][0]
+                        # Fallback to filtered_resps if available
+                        elif "filtered_resps" in sample and sample["filtered_resps"]:
+                            sample["model_full_response"] = sample["filtered_resps"][0]
+            
             # Save results to a JSON file
             results_file = os.path.join(RESULTS_DIR, RESULTS_FILE)
             with open(results_file, "w") as f:
@@ -97,7 +138,7 @@ def run_evaluation():
     except Exception as e:
         logger.error(f"Error running evaluation: {e}")
         return None
-
+    
 def init_argilla_client():
     """Initialize Argilla client from environment variables"""
     argilla_api_key = os.getenv('ARGILLA_API_KEY')
@@ -177,6 +218,12 @@ def create_argilla_dataset(argilla_client, dataset_name):
                     required=True,
                 ),
                 
+                TextField(
+                    name="model_full_response",
+                    title="Full Model Response",
+                    required=True,
+                    use_markdown=True,  # Enable markdown for better formatting
+                ),
             ],
             questions=[
                 # Validation question
@@ -194,6 +241,7 @@ def create_argilla_dataset(argilla_client, dataset_name):
                     required=False,
                     use_markdown=True,
                 ),
+                
             ],
         )
 
@@ -258,7 +306,12 @@ def log_results_to_argilla(argilla_client, results, dataset_name, batch_size=1):
                         model_response = sample.get("filtered_resps", [""])[0] if sample.get("filtered_resps") else ""
                         if not model_response and "model_response" in sample:
                             model_response = sample.get("model_response", "")
-                            
+                        
+                        extracted_answer = sample.get("filtered_resps", [""])[0] if sample.get("filtered_resps") else ""
+                        if not extracted_answer and "model_response" in sample:
+                            extracted_answer = sample.get("model_response", "")
+                        
+                        full_response = sample.get("model_full_response", extracted_answer)
                         target_response = sample.get("target", "")
                         
                         # Skip if question is empty
@@ -275,6 +328,7 @@ def log_results_to_argilla(argilla_client, results, dataset_name, batch_size=1):
                                 "option_c": option_c,
                                 "option_d": option_d,
                                 "model_response": model_response,
+                                "model_full_response": full_response,
                                 "target_response": target_response
                             }
                         )
